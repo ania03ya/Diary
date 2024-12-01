@@ -68,12 +68,11 @@ class _HomePageState extends State<HomePage> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   onTap: () {
-                    // 日記詳細画面に遷移
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => DiaryDetailPage(entry: entry),
-                        ),
+                      ),
                     );
                   },
                 );
@@ -117,7 +116,7 @@ class NewEntryPage extends StatelessWidget {
               controller: titleController,
               decoration: const InputDecoration(
                 labelText: 'Title',
-                border: OutlineInputBorder(), // 境界線を追加
+                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
@@ -125,7 +124,7 @@ class NewEntryPage extends StatelessWidget {
               controller: contentController,
               decoration: const InputDecoration(
                 labelText: 'Content',
-                border: OutlineInputBorder(), // 境界線を追加
+                border: OutlineInputBorder(),
               ),
               maxLines: 5,
             ),
@@ -135,10 +134,50 @@ class NewEntryPage extends StatelessWidget {
                 if (titleController.text.isNotEmpty &&
                     contentController.text.isNotEmpty) {
                   onSave(titleController.text, contentController.text);
-                  Navigator.pop(context); // 保存後に戻る
+                  Navigator.pop(context);
                 }
               },
               child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 日記詳細画面
+class DiaryDetailPage extends StatelessWidget {
+  final DiaryEntry entry;
+
+  const DiaryDetailPage({Key? key, required this.entry}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(entry.title),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              entry.title,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              entry.content,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Back'),
             ),
           ],
         ),
