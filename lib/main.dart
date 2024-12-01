@@ -26,7 +26,7 @@ class DiaryApp extends StatelessWidget {
 class DiaryEntry {
   final String title;
   final String content;
-  final File? image; //images
+  final File? image; // images
 
   DiaryEntry({required this.title, required this.content, this.image});
 }
@@ -45,8 +45,7 @@ class _HomePageState extends State<HomePage> {
   // 新しい日記を追加するメソッド
   void _addDiaryEntry(String title, String content, File? image) {
     setState(() {
-      _diaryEntries
-          .add(DiaryEntry(title: title, content: content, image: image));
+      _diaryEntries.add(DiaryEntry(title: title, content: content, image: image));
     });
   }
 
@@ -66,8 +65,12 @@ class _HomePageState extends State<HomePage> {
                 final entry = _diaryEntries[index];
                 return ListTile(
                   leading: entry.image != null
-                      ? Image.file(entry.image!,
-                          width: 50, height: 50, fit: BoxFit.cover)
+                      ? Image.file(
+                          entry.image!,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                        )
                       : const Icon(Icons.image),
                   title: Text(entry.title),
                   subtitle: Text(
@@ -114,17 +117,26 @@ class NewEntryPage extends StatefulWidget {
 class _NewEntryPageState extends State<NewEntryPage> {
   final TextEditingController titleController = TextEditingController();
   final TextEditingController contentController = TextEditingController();
-  File? _selectedImage; // 画像を保持する変数
+  File? _selectedImage;
 
+  // 非同期で画像をピックするメソッド
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile =
-        await picker.pickImage(source: ImageSource.gallery); // ギャラリーから画像を選択
+    try {
+      final ImagePicker picker = ImagePicker(); // pickerをここで定義
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800, // 画像の幅を制限
+        maxHeight: 800, // 画像の高さを制限
+        imageQuality: 80, // 画像のクオリティを下げてファイルサイズを小さく
+      );
 
-    if (pickedFile != null) {
-      setState(() {
-        _selectedImage = File(pickedFile.path); // 画像を保持
-      });
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImage = File(pickedFile.path); // 画像を保持
+        });
+      }
+    } catch (e) {
+      print("Error picking image: $e");
     }
   }
 
@@ -156,8 +168,11 @@ class _NewEntryPageState extends State<NewEntryPage> {
             ),
             const SizedBox(height: 16),
             _selectedImage != null
-                ? Image.file(_selectedImage!,
-                    height: 150, fit: BoxFit.cover) // 画像を表示
+                ? Image.file(
+                    _selectedImage!,
+                    height: 150,
+                    fit: BoxFit.cover,
+                  ) // 画像を表示
                 : const Text('No image selected.'), // 画像が選択されていない場合のメッセージ
             const SizedBox(height: 16),
             ElevatedButton.icon(
