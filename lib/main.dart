@@ -4,8 +4,9 @@ void main() {
   runApp(const DiaryApp());
 }
 
+// アプリ全体の構成
 class DiaryApp extends StatelessWidget {
-  const DiaryApp({Key? key}) : super(key: key); // constを追加
+  const DiaryApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -14,43 +15,90 @@ class DiaryApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const HomePage(), // constを追加
+      home: const HomePage(),
     );
   }
 }
 
-class HomePage extends StatelessWidget {
-  const HomePage({Key? key}) : super(key: key); // constを追加
+// 日記のデータモデル
+class DiaryEntry {
+  final String title;
+  final String content;
+
+  DiaryEntry({required this.title, required this.content});
+}
+
+// ホームページ
+class HomePage extends StatefulWidget {
+  const HomePage({Key? key}) : super(key: key);
+
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final List<DiaryEntry> _diaryEntries = [];
+
+  // 新しい日記を追加するメソッド
+  void _addDiaryEntry(String title, String content) {
+    setState(() {
+      _diaryEntries.add(DiaryEntry(title: title, content: content));
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Diary'), // constを追加
+        title: const Text('My Diary'),
       ),
-      body: const Center(
-        child: Text('Welcome to the Diary App!'), // constを追加
-      ),
+      body: _diaryEntries.isEmpty
+          ? const Center(
+              child: Text('No diary entries yet.'),
+            )
+          : ListView.builder(
+              itemCount: _diaryEntries.length,
+              itemBuilder: (context, index) {
+                final entry = _diaryEntries[index];
+                return ListTile(
+                  title: Text(entry.title),
+                  subtitle: Text(
+                    entry.content,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onTap: () {
+                    // 詳細画面の実装は後ほど追加
+                  },
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const NewEntryPage(), // 投稿画面へ遷移
+              builder: (context) => NewEntryPage(onSave: _addDiaryEntry),
             ),
           );
         },
-        child: const Icon(Icons.add), // constを追加
+        child: const Icon(Icons.add),
       ),
     );
   }
 }
 
+// 新規日記投稿画面
 class NewEntryPage extends StatelessWidget {
-  const NewEntryPage({Key? key}) : super(key: key);
+  final Function(String, String) onSave;
+
+  const NewEntryPage({Key? key, required this.onSave}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final TextEditingController titleController = TextEditingController();
+    final TextEditingController contentController = TextEditingController();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('New Diary Entry'),
@@ -58,31 +106,33 @@ class NewEntryPage extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const TextField(
-              decoration: InputDecoration(
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
                 labelText: 'Title',
                 border: OutlineInputBorder(), // 境界線を追加
               ),
             ),
             const SizedBox(height: 16),
-            const TextField(
-              decoration: InputDecoration(
+            TextField(
+              controller: contentController,
+              decoration: const InputDecoration(
                 labelText: 'Content',
                 border: OutlineInputBorder(), // 境界線を追加
               ),
               maxLines: 5,
             ),
             const SizedBox(height: 16),
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  // 保存処理を追加
-                  Navigator.pop(context); // 保存後に前の画面に戻る
-                },
-                child: const Text('Save'),
-              ),
+            ElevatedButton(
+              onPressed: () {
+                if (titleController.text.isNotEmpty &&
+                    contentController.text.isNotEmpty) {
+                  onSave(titleController.text, contentController.text);
+                  Navigator.pop(context); // 保存後に戻る
+                }
+              },
+              child: const Text('Save'),
             ),
           ],
         ),
