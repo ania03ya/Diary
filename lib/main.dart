@@ -68,7 +68,13 @@ class _HomePageState extends State<HomePage> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   onTap: () {
-                    // 詳細画面の実装は後ほど追加
+                    // 日記詳細画面に遷移
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DiaryDetailPage(entry: entry),
+                        ),
+                    );
                   },
                 );
               },
