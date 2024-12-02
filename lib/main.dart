@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io'; //images
 import 'package:image_picker/image_picker.dart'; //images
+import 'package:geolocator/geolocator.dart'; // 位置情報
 
 void main() {
   runApp(const DiaryApp());
@@ -27,8 +28,9 @@ class DiaryEntry {
   final String title;
   final String content;
   final File? image; // images
+  final String? location; // 位置情報を追加
 
-  DiaryEntry({required this.title, required this.content, this.image});
+  DiaryEntry({required this.title, required this.content, this.image, this.location});
 }
 
 // ホームページ
@@ -43,9 +45,9 @@ class _HomePageState extends State<HomePage> {
   final List<DiaryEntry> _diaryEntries = [];
 
   // 新しい日記を追加するメソッド
-  void _addDiaryEntry(String title, String content, File? image) {
+  void _addDiaryEntry(String title, String content, File? image, String? location) {
     setState(() {
-      _diaryEntries.add(DiaryEntry(title: title, content: content, image: image));
+      _diaryEntries.add(DiaryEntry(title: title, content: content, image: image, location: location));
     });
   }
 
@@ -106,7 +108,7 @@ class _HomePageState extends State<HomePage> {
 
 // 新規日記投稿画面
 class NewEntryPage extends StatefulWidget {
-  final Function(String, String, File?) onSave;
+  final Function(String, String, File?, String?) onSave;
 
   const NewEntryPage({Key? key, required this.onSave}) : super(key: key);
 
@@ -118,6 +120,7 @@ class _NewEntryPageState extends State<NewEntryPage> {
   final TextEditingController titleController = TextEditingController();
   final TextEditingController contentController = TextEditingController();
   File? _selectedImage;
+  String? _currentLocation;
 
   // 非同期で画像をピックするメソッド
   Future<void> _pickImage() async {
@@ -138,6 +141,37 @@ class _NewEntryPageState extends State<NewEntryPage> {
     } catch (e) {
       print("Error picking image: $e");
     }
+  }
+
+  // 位置情報を取得するメソッド
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+    // 位置情報サービスが有効かどうかを確認
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // 位置情報サービスが無効の場合は終了
+      print("Location services are disabled.");
+      return;
+    }
+    // 必要な位置情報の許可をリクエスト
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        print("Location permissions are denied.");
+        return;
+      }
+    }
+    if (permission == LocationPermission.deniedForever) {
+      print("Location permissions are permanently denied.");
+      return;
+    }
+    // 現在位置を取得
+    Position position = await Geolocator.getCurrentPosition();
+    setState(() {
+      _currentLocation = "${position.latitude}, ${position.longitude}";
+    });
   }
 
   @override
@@ -181,14 +215,21 @@ class _NewEntryPageState extends State<NewEntryPage> {
               label: const Text('Add Photo'),
             ),
             const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _getCurrentLocation,
+              icon: const Icon(Icons.location_on),
+              label: const Text('Get Current Location'),
+            ),
+            if (_currentLocation != null) Text('Location: $_currentLocation'),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                if (titleController.text.isNotEmpty &&
-                    contentController.text.isNotEmpty) {
+                if (titleController.text.isNotEmpty && contentController.text.isNotEmpty) {
                   widget.onSave(
                     titleController.text,
                     contentController.text,
-                    _selectedImage, // 画像を保存
+                    _selectedImage,
+                    _currentLocation,
                   );
                   Navigator.pop(context);
                 }
@@ -219,8 +260,7 @@ class DiaryDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (entry.image != null)
-              Image.file(entry.image!, fit: BoxFit.cover),
+            if (entry.image != null) Image.file(entry.image!, fit: BoxFit.cover),
             const SizedBox(height: 16),
             Text(
               entry.title,
@@ -231,6 +271,11 @@ class DiaryDetailPage extends StatelessWidget {
               entry.content,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
+            if (entry.location != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: Text('Location: ${entry.location}'),
+              ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
