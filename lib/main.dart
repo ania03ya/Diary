@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:io'; //images
 import 'package:image_picker/image_picker.dart'; //images
 import 'package:geolocator/geolocator.dart'; // 位置情報
+import 'package:geocoding/geocoding.dart'; // 逆ジオコーディング
 
 void main() {
   runApp(const DiaryApp());
@@ -121,6 +122,7 @@ class _NewEntryPageState extends State<NewEntryPage> {
   final TextEditingController contentController = TextEditingController();
   File? _selectedImage;
   String? _currentLocation;
+  bool _isRequestingLocation = false;
 
   // 非同期で画像をピックするメソッド
   Future<void> _pickImage() async {
@@ -145,33 +147,59 @@ class _NewEntryPageState extends State<NewEntryPage> {
 
   // 位置情報を取得するメソッド
   Future<void> _getCurrentLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-    // 位置情報サービスが有効かどうかを確認
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      // 位置情報サービスが無効の場合は終了
-      print("Location services are disabled.");
+    if (_isRequestingLocation) {
+      // すでにリクエスト中の場合は何もしない
       return;
     }
-    // 必要な位置情報の許可をリクエスト
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        print("Location permissions are denied.");
+
+    setState(() {
+      _isRequestingLocation = true;
+    });
+
+    try {
+      bool serviceEnabled;
+      LocationPermission permission;
+
+      // 位置情報サービスが有効かどうかを確認
+      serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        // 位置情報サービスが無効の場合は終了
+        print("Location services are disabled.");
         return;
       }
+
+      // 必要な位置情報の許可をリクエスト
+      permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          print("Location permissions are denied.");
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        print("Location permissions are permanently denied.");
+        return;
+      }
+
+      // 現在位置を取得
+      Position position = await Geolocator.getCurrentPosition();
+      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+      setState(() {
+        _currentLocation = "${place.name}, ${place.locality}, ${place.country}";
+      });
+      }
+    } catch (e) {
+      print("Error getting location: $e");
+    } finally {
+      setState(() {
+        _isRequestingLocation = false;
+      });
     }
-    if (permission == LocationPermission.deniedForever) {
-      print("Location permissions are permanently denied.");
-      return;
-    }
-    // 現在位置を取得
-    Position position = await Geolocator.getCurrentPosition();
-    setState(() {
-      _currentLocation = "${position.latitude}, ${position.longitude}";
-    });
   }
 
   @override
@@ -216,7 +244,7 @@ class _NewEntryPageState extends State<NewEntryPage> {
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              onPressed: _getCurrentLocation,
+              onPressed: _isRequestingLocation ? null : _getCurrentLocation, // リクエスト中は無効
               icon: const Icon(Icons.location_on),
               label: const Text('Get Current Location'),
             ),
