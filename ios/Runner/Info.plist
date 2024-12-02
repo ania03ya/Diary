@@ -8,6 +8,8 @@
     <string>We need access to your photo library to select images for your diary entries.</string>
     <key>NSCameraUsageDescription</key>
     <string>We need access to your camera to take photos for your diary entries.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>We need your location to add it to your diary entry.</string>
     <key>CFBundleDisplayName</key>
     <string>Diary Application</string>
     <key>CFBundleExecutable</key>
