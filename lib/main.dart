@@ -4,6 +4,9 @@ import 'package:image_picker/image_picker.dart'; //images
 import 'package:geolocator/geolocator.dart'; // 位置情報
 import 'package:geocoding/geocoding.dart'; // 逆ジオコーディング
 import 'dart:math'; // ランダム生成に使用
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+
 List<String> positiveComments = [
   "Great job! 😊",
   "You're amazing! 🌟",
@@ -17,7 +20,11 @@ List<String> positiveComments = [
   "Your thoughts are beautiful! 💖"
 ];
 
-void main() {
+void main() async {
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const DiaryApp());
 }
 
@@ -45,7 +52,12 @@ class DiaryEntry {
   final String? location; // 位置情報を追加
   final String? comment; // コメントを追加
 
-  DiaryEntry({required this.title, required this.content, this.image, this.location,this.comment, // コメントをコンストラクタに追加
+  DiaryEntry({
+    required this.title,
+    required this.content,
+    this.image,
+    this.location,
+    this.comment, // コメントをコンストラクタに追加
   });
 }
 
@@ -61,18 +73,20 @@ class _HomePageState extends State<HomePage> {
   final List<DiaryEntry> _diaryEntries = [];
 
   // 新しい日記を追加するメソッド
-void _addDiaryEntry(String title, String content, File? image, String? location) {
-  setState(() {
-    String randomComment = positiveComments[Random().nextInt(positiveComments.length)];
-    _diaryEntries.add(DiaryEntry(
-      title: title,
-      content: content,
-      image: image,
-      location: location,
-      comment: randomComment, // ランダムなコメントを追加
-    ));
-  });
-}
+  void _addDiaryEntry(
+      String title, String content, File? image, String? location) {
+    setState(() {
+      String randomComment =
+          positiveComments[Random().nextInt(positiveComments.length)];
+      _diaryEntries.add(DiaryEntry(
+        title: title,
+        content: content,
+        image: image,
+        location: location,
+        comment: randomComment, // ランダムなコメントを追加
+      ));
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -207,13 +221,15 @@ class _NewEntryPageState extends State<NewEntryPage> {
 
       // 現在位置を取得
       Position position = await Geolocator.getCurrentPosition();
-      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+      List<Placemark> placemarks =
+          await placemarkFromCoordinates(position.latitude, position.longitude);
 
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks[0];
-      setState(() {
-        _currentLocation = "${place.name}, ${place.locality}, ${place.country}";
-      });
+        setState(() {
+          _currentLocation =
+              "${place.name}, ${place.locality}, ${place.country}";
+        });
       }
     } catch (e) {
       print("Error getting location: $e");
@@ -266,7 +282,9 @@ class _NewEntryPageState extends State<NewEntryPage> {
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              onPressed: _isRequestingLocation ? null : _getCurrentLocation, // リクエスト中は無効
+              onPressed: _isRequestingLocation
+                  ? null
+                  : _getCurrentLocation, // リクエスト中は無効
               icon: const Icon(Icons.location_on),
               label: const Text('Get Current Location'),
             ),
@@ -274,7 +292,8 @@ class _NewEntryPageState extends State<NewEntryPage> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                if (titleController.text.isNotEmpty && contentController.text.isNotEmpty) {
+                if (titleController.text.isNotEmpty &&
+                    contentController.text.isNotEmpty) {
                   widget.onSave(
                     titleController.text,
                     contentController.text,
