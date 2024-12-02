@@ -3,6 +3,19 @@ import 'dart:io'; //images
 import 'package:image_picker/image_picker.dart'; //images
 import 'package:geolocator/geolocator.dart'; // 位置情報
 import 'package:geocoding/geocoding.dart'; // 逆ジオコーディング
+import 'dart:math'; // ランダム生成に使用
+List<String> positiveComments = [
+  "Great job! 😊",
+  "You're amazing! 🌟",
+  "Keep it up! 💪",
+  "This is so inspiring! ✨",
+  "Well done! 👏",
+  "You did fantastic today! ❤️",
+  "Keep shining! ☀️",
+  "You're on the right track! 🚀",
+  "Love this! ❤️",
+  "Your thoughts are beautiful! 💖"
+];
 
 void main() {
   runApp(const DiaryApp());
@@ -30,8 +43,10 @@ class DiaryEntry {
   final String content;
   final File? image; // images
   final String? location; // 位置情報を追加
+  final String? comment; // コメントを追加
 
-  DiaryEntry({required this.title, required this.content, this.image, this.location});
+  DiaryEntry({required this.title, required this.content, this.image, this.location,this.comment, // コメントをコンストラクタに追加
+  });
 }
 
 // ホームページ
@@ -46,11 +61,18 @@ class _HomePageState extends State<HomePage> {
   final List<DiaryEntry> _diaryEntries = [];
 
   // 新しい日記を追加するメソッド
-  void _addDiaryEntry(String title, String content, File? image, String? location) {
-    setState(() {
-      _diaryEntries.add(DiaryEntry(title: title, content: content, image: image, location: location));
-    });
-  }
+void _addDiaryEntry(String title, String content, File? image, String? location) {
+  setState(() {
+    String randomComment = positiveComments[Random().nextInt(positiveComments.length)];
+    _diaryEntries.add(DiaryEntry(
+      title: title,
+      content: content,
+      image: image,
+      location: location,
+      comment: randomComment, // ランダムなコメントを追加
+    ));
+  });
+}
 
   @override
   Widget build(BuildContext context) {
@@ -271,7 +293,7 @@ class _NewEntryPageState extends State<NewEntryPage> {
   }
 }
 
-// 日記詳細画面
+// 日記詳細画面でコメントを表示
 class DiaryDetailPage extends StatelessWidget {
   final DiaryEntry entry;
 
@@ -288,7 +310,8 @@ class DiaryDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (entry.image != null) Image.file(entry.image!, fit: BoxFit.cover),
+            if (entry.image != null)
+              Image.file(entry.image!, fit: BoxFit.cover),
             const SizedBox(height: 16),
             Text(
               entry.title,
@@ -303,6 +326,21 @@ class DiaryDetailPage extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 16.0),
                 child: Text('Location: ${entry.location}'),
+              ),
+            const SizedBox(height: 16),
+            if (entry.comment != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.favorite, color: Colors.red), // ❤️アイコン
+                    const SizedBox(width: 8),
+                    Text(
+                      entry.comment!,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
               ),
             const SizedBox(height: 16),
             ElevatedButton(
