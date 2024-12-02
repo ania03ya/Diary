@@ -6,6 +6,10 @@ import 'package:geocoding/geocoding.dart'; // 逆ジオコーディング
 import 'dart:math'; // ランダム生成に使用
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+// Firestore のインスタンス
+final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
 List<String> positiveComments = [
   "Great job! 😊",
@@ -21,6 +25,7 @@ List<String> positiveComments = [
 ];
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -75,9 +80,21 @@ class _HomePageState extends State<HomePage> {
   // 新しい日記を追加するメソッド
   void _addDiaryEntry(
       String title, String content, File? image, String? location) {
+    String randomComment =
+        positiveComments[Random().nextInt(positiveComments.length)];
+    // Firestore に保存するためにデータをマップとして構成
+    Map<String, dynamic> entryData = {
+      'title': title,
+      'content': content,
+      'location': location,
+      'comment': randomComment,
+      'created_at': Timestamp.now(),
+    };
+
+    // Firestore に新しいドキュメントを追加
+    _firestore.collection('diary_entries').add(entryData);
+
     setState(() {
-      String randomComment =
-          positiveComments[Random().nextInt(positiveComments.length)];
       _diaryEntries.add(DiaryEntry(
         title: title,
         content: content,
@@ -94,40 +111,62 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('My Diary'),
       ),
-      body: _diaryEntries.isEmpty
-          ? const Center(
-              child: Text('No diary entries yet.'),
-            )
-          : ListView.builder(
-              itemCount: _diaryEntries.length,
-              itemBuilder: (context, index) {
-                final entry = _diaryEntries[index];
-                return ListTile(
-                  leading: entry.image != null
-                      ? Image.file(
-                          entry.image!,
-                          width: 50,
-                          height: 50,
-                          fit: BoxFit.cover,
-                        )
-                      : const Icon(Icons.image),
-                  title: Text(entry.title),
-                  subtitle: Text(
-                    entry.content,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DiaryDetailPage(entry: entry),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _firestore.collection('diary_entries').orderBy('created_at', descending: true).snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return const Center(child: Text('Error loading diary entries.'));
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('No diary entries yet.'));
+          }
+
+          final diaryEntries = snapshot.data!.docs.map((doc) {
+            var data = doc.data() as Map<String, dynamic>;
+            return DiaryEntry(
+              title: data['title'],
+              content: data['content'],
+              image: null,
+              location: data['location'],
+              comment: data['comment'],
+            );
+          }).toList();
+
+          return ListView.builder(
+            itemCount: diaryEntries.length,
+            itemBuilder: (context, index) {
+              final entry = diaryEntries[index];
+              return ListTile(
+                leading: entry.image != null
+                    ? Image.file(
+                        entry.image!,
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                      )
+                    : const Icon(Icons.image),
+                title: Text(entry.title),
+                subtitle: Text(
+                  entry.content,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DiaryDetailPage(entry: entry),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
