@@ -56,13 +56,15 @@ class DiaryEntry {
   final File? image; // images
   final String? location; // 位置情報を追加
   final String? comment; // コメントを追加
+  final DateTime createdAt; // 作成日を追加
 
   DiaryEntry({
     required this.title,
     required this.content,
     this.image,
     this.location,
-    this.comment, // コメントをコンストラクタに追加
+    this.comment,
+     required this.createdAt,
   });
 }
 
@@ -82,6 +84,7 @@ class _HomePageState extends State<HomePage> {
       String title, String content, File? image, String? location) {
     String randomComment =
         positiveComments[Random().nextInt(positiveComments.length)];
+        DateTime now = DateTime.now();
     // Firestore に保存するためにデータをマップとして構成
     Map<String, dynamic> entryData = {
       'title': title,
@@ -101,6 +104,7 @@ class _HomePageState extends State<HomePage> {
         image: image,
         location: location,
         comment: randomComment, // ランダムなコメントを追加
+        createdAt: now, // 作成日を設定
       ));
     });
   }
