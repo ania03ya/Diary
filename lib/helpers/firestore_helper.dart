@@ -1,5 +1,4 @@
-// helpers/firestore_helper.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Firebase Firestore のインポート
 
 class FirestoreHelper {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -19,7 +18,16 @@ class FirestoreHelper {
           .orderBy('created_at', descending: true)
           .get();
 
-      return snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+      return snapshot.docs.map((doc) {
+        var data = doc.data() as Map<String, dynamic>;
+
+        // TimestampをDateTimeに変換
+        if (data.containsKey('created_at') && data['created_at'] is Timestamp) {
+          data['created_at'] = (data['created_at'] as Timestamp).toDate();
+        }
+
+        return data;
+      }).toList();
     } catch (e) {
       print("Error fetching diary entries from Firestore: $e");
       return [];

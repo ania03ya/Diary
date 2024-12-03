@@ -1,31 +1,14 @@
 import 'package:flutter/material.dart';
-import 'dart:io'; //images
-import 'package:image_picker/image_picker.dart'; //images
-import 'package:geolocator/geolocator.dart'; // 位置情報
-import 'package:geocoding/geocoding.dart'; // 逆ジオコーディング
-import 'dart:math'; // ランダム生成に使用
+import 'dart:io'; // images
+import 'package:image_picker/image_picker.dart'; // images
+import 'helpers/location_helper.dart'; // 位置情報ヘルパー
+import 'helpers/firestore_helper.dart'; // Firestoreヘルパー
+import 'helpers/comment_helper.dart'; // コメントヘルパー
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-
-// Firestore のインスタンス
-final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-List<String> positiveComments = [
-  "Great job! 😊",
-  "You're amazing! 🌟",
-  "Keep it up! 💪",
-  "This is so inspiring! ✨",
-  "Well done! 👏",
-  "You did fantastic today! ❤️",
-  "Keep shining! ☀️",
-  "You're on the right track! 🚀",
-  "Love this! ❤️",
-  "Your thoughts are beautiful! 💖"
-];
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized(); // Flutter の初期化
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -56,7 +39,7 @@ class DiaryEntry {
   final File? image; // images
   final String? location; // 位置情報を追加
   final String? comment; // コメントを追加
-  final DateTime createdAt; // 作成日を追加
+  final DateTime createdAt;
 
   DiaryEntry({
     required this.title,
@@ -64,7 +47,7 @@ class DiaryEntry {
     this.image,
     this.location,
     this.comment,
-     required this.createdAt,
+    required this.createdAt,
   });
 }
 
@@ -79,13 +62,38 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final List<DiaryEntry> _diaryEntries = [];
 
+  // Firestoreから日記エントリーを読み込むメソッド
+  @override
+  void initState() {
+    super.initState();
+    _loadDiaryEntries();
+  }
+
+  void _loadDiaryEntries() async {
+    List<Map<String, dynamic>> entries = await FirestoreHelper.getDiaryEntries();
+    setState(() {
+      _diaryEntries.clear();
+      for (var data in entries) {
+        _diaryEntries.add(
+          DiaryEntry(
+            title: data['title'],
+            content: data['content'],
+            image: null, // Firestoreには画像データは含まれていないため
+            location: data['location'],
+            comment: data['comment'],
+            createdAt: (data['created_at'] as Timestamp).toDate(),
+          ),
+        );
+      }
+    });
+  }
+
   // 新しい日記を追加するメソッド
-  void _addDiaryEntry(
-      String title, String content, File? image, String? location) {
-    String randomComment =
-        positiveComments[Random().nextInt(positiveComments.length)];
-        DateTime now = DateTime.now();
-    // Firestore に保存するためにデータをマップとして構成
+  void _addDiaryEntry(String title, String content, File? image, String? location) {
+    String randomComment = CommentHelper.getRandomComment();
+    DateTime now = DateTime.now();
+
+    // Firestoreに保存するデータを構成
     Map<String, dynamic> entryData = {
       'title': title,
       'content': content,
@@ -94,18 +102,20 @@ class _HomePageState extends State<HomePage> {
       'created_at': Timestamp.now(),
     };
 
-    // Firestore に新しいドキュメントを追加
-    _firestore.collection('diary_entries').add(entryData);
+    // Firestoreにデータを追加
+    FirestoreHelper.addDiaryEntry(entryData);
 
     setState(() {
-      _diaryEntries.add(DiaryEntry(
-        title: title,
-        content: content,
-        image: image,
-        location: location,
-        comment: randomComment, // ランダムなコメントを追加
-        createdAt: now, // 作成日を設定
-      ));
+      _diaryEntries.add(
+        DiaryEntry(
+          title: title,
+          content: content,
+          image: image,
+          location: location,
+          comment: randomComment,
+          createdAt: now,
+        ),
+      );
     });
   }
 
@@ -115,62 +125,40 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('My Diary'),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore.collection('diary_entries').orderBy('created_at', descending: true).snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return const Center(child: Text('Error loading diary entries.'));
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No diary entries yet.'));
-          }
-
-          final diaryEntries = snapshot.data!.docs.map((doc) {
-            var data = doc.data() as Map<String, dynamic>;
-            return DiaryEntry(
-              title: data['title'],
-              content: data['content'],
-              image: null,
-              location: data['location'],
-              comment: data['comment'],
-            );
-          }).toList();
-
-          return ListView.builder(
-            itemCount: diaryEntries.length,
-            itemBuilder: (context, index) {
-              final entry = diaryEntries[index];
-              return ListTile(
-                leading: entry.image != null
-                    ? Image.file(
-                        entry.image!,
-                        width: 50,
-                        height: 50,
-                        fit: BoxFit.cover,
-                      )
-                    : const Icon(Icons.image),
-                title: Text(entry.title),
-                subtitle: Text(
-                  entry.content,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DiaryDetailPage(entry: entry),
-                    ),
-                  );
-                },
-              );
-            },
-          );
-        },
-      ),
+      body: _diaryEntries.isEmpty
+          ? const Center(
+              child: Text('No diary entries yet.'),
+            )
+          : ListView.builder(
+              itemCount: _diaryEntries.length,
+              itemBuilder: (context, index) {
+                final entry = _diaryEntries[index];
+                return ListTile(
+                  leading: entry.image != null
+                      ? Image.file(
+                          entry.image!,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                        )
+                      : const Icon(Icons.image),
+                  title: Text(entry.title),
+                  subtitle: Text(
+                    entry.content,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DiaryDetailPage(entry: entry),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
@@ -201,22 +189,21 @@ class _NewEntryPageState extends State<NewEntryPage> {
   final TextEditingController contentController = TextEditingController();
   File? _selectedImage;
   String? _currentLocation;
-  bool _isRequestingLocation = false;
 
   // 非同期で画像をピックするメソッド
   Future<void> _pickImage() async {
     try {
-      final ImagePicker picker = ImagePicker(); // pickerをここで定義
+      final ImagePicker picker = ImagePicker();
       final pickedFile = await picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 800, // 画像の幅を制限
-        maxHeight: 800, // 画像の高さを制限
-        imageQuality: 80, // 画像のクオリティを下げてファイルサイズを小さく
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 80,
       );
 
       if (pickedFile != null) {
         setState(() {
-          _selectedImage = File(pickedFile.path); // 画像を保持
+          _selectedImage = File(pickedFile.path);
         });
       }
     } catch (e) {
@@ -226,61 +213,10 @@ class _NewEntryPageState extends State<NewEntryPage> {
 
   // 位置情報を取得するメソッド
   Future<void> _getCurrentLocation() async {
-    if (_isRequestingLocation) {
-      // すでにリクエスト中の場合は何もしない
-      return;
-    }
-
+    String? location = await LocationHelper.getCurrentLocation();
     setState(() {
-      _isRequestingLocation = true;
+      _currentLocation = location;
     });
-
-    try {
-      bool serviceEnabled;
-      LocationPermission permission;
-
-      // 位置情報サービスが有効かどうかを確認
-      serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        // 位置情報サービスが無効の場合は終了
-        print("Location services are disabled.");
-        return;
-      }
-
-      // 必要な位置情報の許可をリクエスト
-      permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          print("Location permissions are denied.");
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        print("Location permissions are permanently denied.");
-        return;
-      }
-
-      // 現在位置を取得
-      Position position = await Geolocator.getCurrentPosition();
-      List<Placemark> placemarks =
-          await placemarkFromCoordinates(position.latitude, position.longitude);
-
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-        setState(() {
-          _currentLocation =
-              "${place.name}, ${place.locality}, ${place.country}";
-        });
-      }
-    } catch (e) {
-      print("Error getting location: $e");
-    } finally {
-      setState(() {
-        _isRequestingLocation = false;
-      });
-    }
   }
 
   @override
@@ -315,19 +251,17 @@ class _NewEntryPageState extends State<NewEntryPage> {
                     _selectedImage!,
                     height: 150,
                     fit: BoxFit.cover,
-                  ) // 画像を表示
-                : const Text('No image selected.'), // 画像が選択されていない場合のメッセージ
+                  )
+                : const Text('No image selected.'),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              onPressed: _pickImage, // 画像選択ボタン
+              onPressed: _pickImage,
               icon: const Icon(Icons.photo),
               label: const Text('Add Photo'),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              onPressed: _isRequestingLocation
-                  ? null
-                  : _getCurrentLocation, // リクエスト中は無効
+              onPressed: _getCurrentLocation,
               icon: const Icon(Icons.location_on),
               label: const Text('Get Current Location'),
             ),
@@ -395,7 +329,7 @@ class DiaryDetailPage extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 16.0),
                 child: Row(
                   children: [
-                    const Icon(Icons.favorite, color: Colors.red), // ❤️アイコン
+                    const Icon(Icons.favorite, color: Colors.red),
                     const SizedBox(width: 8),
                     Text(
                       entry.comment!,
