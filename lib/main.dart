@@ -3,7 +3,6 @@ import 'dart:io'; // images
 import 'package:image_picker/image_picker.dart'; // images
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'helpers/image_helper.dart'; // 画像ヘルパーのインポート
 import 'helpers/location_helper.dart'; // 位置情報ヘルパー
@@ -144,107 +143,111 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: const Text('My Diary'),
-    ),
-    body: _diaryEntries.isEmpty
-        ? const Center(
-            child: Text('No diary entries yet.'),
-          )
-        : ListView.builder(
-            itemCount: _diaryEntries.length,
-            itemBuilder: (context, index) {
-              final entry = _diaryEntries[index];
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 500),
-                  child: Card(
-                    key: ValueKey(entry.createdAt),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15.0),
-                    ),
-                    elevation: 5,
-                    child: Column(
-                      children: [
-                        if (entry.image != null)
-                          ClipRRect(
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(15.0)),
-                            child: Image.file(
-                              entry.image!,
-                              width: double.infinity,
-                              height: 200,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ListTile(
-                          contentPadding: const EdgeInsets.all(16.0),
-                          title: Text(
-                            entry.title,
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                entry.content,
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontStyle: FontStyle.italic,
-                                  color: Colors.grey[800],
-                                ),
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('My Diary'),
+      ),
+      body: _diaryEntries.isEmpty
+          ? const Center(
+              child: Text('No diary entries yet.'),
+            )
+          : ListView.builder(
+              itemCount: _diaryEntries.length,
+              itemBuilder: (context, index) {
+                final entry = _diaryEntries[index];
+                return Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 500),
+                    child: Card(
+                      key: ValueKey(entry.createdAt),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15.0),
+                      ),
+                      elevation: 5,
+                      child: Column(
+                        children: [
+                          if (entry.imageUrl != null)
+                            ClipRRect(
+                              borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(15.0)),
+                              child: Image.network(
+                                entry.imageUrl!,
+                                width: double.infinity,
+                                height: 200,
+                                fit: BoxFit.cover,
                               ),
-                              const SizedBox(height: 8),
-                              if (entry.location != null)
+                            ),
+                          ListTile(
+                            contentPadding: const EdgeInsets.all(16.0),
+                            title: Text(
+                              entry.title,
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Text(
-                                  '📍 ${entry.location}',
-                                  style: TextStyle(color: Colors.blueAccent),
+                                  entry.content,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontStyle: FontStyle.italic,
+                                    color: Colors.grey[800],
+                                  ),
                                 ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '❤️ ${entry.likeCount}',
-                                style: TextStyle(fontSize: 14, color: Colors.red),
-                              ),
-                            ],
+                                const SizedBox(height: 8),
+                                if (entry.location != null)
+                                  Text(
+                                    '📍 ${entry.location}',
+                                    style: TextStyle(color: Colors.blueAccent),
+                                  ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '❤️ ${entry.likeCount}',
+                                  style:
+                                      TextStyle(fontSize: 14, color: Colors.red),
+                                ),
+                              ],
+                            ),
+                            trailing: const Icon(Icons.arrow_forward_ios),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      DiaryDetailPage(entry: entry),
+                                ),
+                              );
+                            },
                           ),
-                          trailing: const Icon(Icons.arrow_forward_ios),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => DiaryDetailPage(entry: entry),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
-          ),
-    floatingActionButton: FloatingActionButton(
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => NewEntryPage(onSave: _addDiaryEntry),
-          ),
-        );
-      },
-      child: const Icon(Icons.add),
-    ),
-  );
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => NewEntryPage(onSave: _addDiaryEntry),
+            ),
+          );
+        },
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
 }
-
 
 // 新規日記投稿画面
 class NewEntryPage extends StatefulWidget {
