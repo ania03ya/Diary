@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:io'; // images
 import 'package:image_picker/image_picker.dart'; // images
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 //import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'helpers/image_helper.dart'; // 画像ヘルパーのインポート
 import 'helpers/location_helper.dart'; // 位置情報ヘルパー
 import 'helpers/firestore_helper.dart'; // Firestoreヘルパー
 import 'helpers/comment_helper.dart'; // コメントヘルパー
@@ -39,7 +40,8 @@ class DiaryApp extends StatelessWidget {
 class DiaryEntry {
   final String title;
   final String content;
-  final File? image; // images
+  final File? image; // ローカル画像ファイル
+  final String? imageUrl; // Firebase Storage の画像 URL
   final String? location; // 位置情報を追加
   final String? comment; // コメントを追加
   final DateTime createdAt;
@@ -49,6 +51,7 @@ class DiaryEntry {
     required this.title,
     required this.content,
     this.image,
+    this.imageUrl,
     this.location,
     this.comment,
     required this.createdAt,
@@ -84,12 +87,13 @@ class _HomePageState extends State<HomePage> {
           DiaryEntry(
             title: data['title'] ?? '',
             content: data['content'] ?? '',
-            image: null, // Firestore には画像データは含まれていないため
+            image: null, // ローカルには画像ファイルは保持しない
+            imageUrl: data['image_url'], // Firestoreからの画像URLを設定
             location: data['location'],
             comment: data['comment'],
             createdAt:
                 DateTime.fromMillisecondsSinceEpoch(data['created_at'] ?? 0),
-            likeCount: data['like_count'] ?? 0, // Firestore からの like_count を追加
+            likeCount: data['like_count'] ?? 0,
           ),
         );
       }
@@ -98,12 +102,18 @@ class _HomePageState extends State<HomePage> {
 
   // 新しい日記を追加するメソッド
   void _addDiaryEntry(
-      String title, String content, File? image, String? location) {
-      String randomComment = CommentHelper.getRandomComment();
-      int randomLikeCount = Random().nextInt(100); // 0から99のランダムないいね数を生成
-      DateTime now = DateTime.now(); // 現在時刻を取得
+      String title, String content, File? image, String? location) async {
+    String randomComment = CommentHelper.getRandomComment();
+    int randomLikeCount = Random().nextInt(100); // 0から99のランダムないいね数を生成
+    DateTime now = DateTime.now(); // 現在時刻を取得
 
-     // Firestoreに保存するデータを構成
+    // 画像をFirebase Storageにアップロード
+    String? imageUrl;
+    if (image != null) {
+      imageUrl = await ImageHelper.uploadImage(image);
+    }
+
+    // Firestoreに保存するデータを構成
     Map<String, dynamic> entryData = {
       'title': title,
       'content': content,
@@ -111,6 +121,7 @@ class _HomePageState extends State<HomePage> {
       'comment': randomComment,
       'like_count': randomLikeCount, // Like 数を追加
       'created_at': now.millisecondsSinceEpoch, // 'now' を使用して作成日時を追加
+      'image_url': imageUrl, // アップロードした画像のURLを保存
     };
 
     // Firestoreにデータを追加
@@ -121,12 +132,12 @@ class _HomePageState extends State<HomePage> {
         DiaryEntry(
           title: entryData['title'] ?? '',
           content: entryData['content'] ?? '',
-          image: null, // Firestoreには画像データは含まれていないため
+          image: image, // ローカルでの表示用
           location: entryData['location'],
           comment: entryData['comment'],
           createdAt: now, // 'now' を使用して作成日時を追加
           likeCount: entryData['like_count'] ?? 0, // Firestoreからのlike_countを追加
-          ),
+        ),
       );
     });
   }
@@ -240,6 +251,22 @@ class _NewEntryPageState extends State<NewEntryPage> {
     }
   }
 
+  // Firebase Storageに画像をアップロードするメソッド
+  Future<String?> _uploadImage(File image) async {
+    try {
+      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+      Reference storageRef =
+          FirebaseStorage.instance.ref().child('diary_images').child(fileName);
+      UploadTask uploadTask = storageRef.putFile(image);
+      TaskSnapshot snapshot = await uploadTask;
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      print("Error uploading image: $e");
+      return null;
+    }
+  }
+
   // 位置情報を取得するメソッド
   Future<void> _getCurrentLocation() async {
     String? location = await LocationHelper.getCurrentLocation();
@@ -318,6 +345,28 @@ class _NewEntryPageState extends State<NewEntryPage> {
   }
 }
 
+class ImageHelper {
+  static Future<String?> uploadImage(File image) async {
+    try {
+      // Firebase Storage の参照を取得
+      Reference ref = FirebaseStorage.instance
+          .ref()
+          .child('diary_images/${DateTime.now().millisecondsSinceEpoch}.jpg');
+
+      // 画像をアップロード
+      UploadTask uploadTask = ref.putFile(image);
+      TaskSnapshot snapshot = await uploadTask;
+
+      // アップロードが完了したら画像の URL を取得
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      print('Error uploading image: $e');
+      return null;
+    }
+  }
+}
+
 // 日記詳細画面でコメントを表示
 class DiaryDetailPage extends StatelessWidget {
   final DiaryEntry entry;
@@ -335,8 +384,11 @@ class DiaryDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (entry.image != null)
-              Image.file(entry.image!, fit: BoxFit.cover),
+            if (entry.imageUrl != null)
+              Image.network(
+                entry.imageUrl!,
+                fit: BoxFit.cover,
+              ),
             const SizedBox(height: 16),
             Text(
               entry.title,
