@@ -1,12 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FirestoreHelper {
-  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  // Firestore のインスタンスを static にする
+  static final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
   // Firestore に日記エントリーを追加するメソッド
   static Future<void> addDiaryEntry(Map<String, dynamic> entryData) async {
     try {
-      await _firestore.collection('diary_entries').add(entryData);
+      await firestore.collection('diary_entries').add(entryData);
     } catch (e) {
       print("Error adding diary entry to Firestore: $e");
     }
@@ -15,21 +16,16 @@ class FirestoreHelper {
   // Firestore から日記エントリーを取得するメソッド
   static Future<List<Map<String, dynamic>>> getDiaryEntries() async {
     try {
-      QuerySnapshot snapshot = await _firestore
+      // Firestoreからデータを取得
+      QuerySnapshot snapshot = await firestore
           .collection('diary_entries')
           .orderBy('created_at', descending: true)
           .get();
 
-      return snapshot.docs.map((doc) {
-        var data = doc.data() as Map<String, dynamic>;
-
-        // TimestampをDateTimeに変換
-        if (data.containsKey('created_at') && data['created_at'] is Timestamp) {
-          data['created_at'] = (data['created_at'] as Timestamp).toDate();
-        }
-
-        return data;
-      }).toList();
+      // ドキュメントからデータをリストとして変換
+      return snapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
     } catch (e) {
       print("Error fetching diary entries from Firestore: $e");
       return [];

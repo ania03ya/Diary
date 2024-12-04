@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'dart:io'; // images
 import 'package:image_picker/image_picker.dart'; // images
 import 'package:firebase_core/firebase_core.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+//import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'helpers/location_helper.dart'; // 位置情報ヘルパー
 import 'helpers/firestore_helper.dart'; // Firestoreヘルパー
 import 'helpers/comment_helper.dart'; // コメントヘルパー
 import 'firebase_options.dart';
+import 'dart:math'; // ランダム生成に使用
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Flutter の初期化
@@ -42,6 +43,7 @@ class DiaryEntry {
   final String? location; // 位置情報を追加
   final String? comment; // コメントを追加
   final DateTime createdAt;
+  final int likeCount; // いいねの数を追加
 
   DiaryEntry({
     required this.title,
@@ -50,6 +52,7 @@ class DiaryEntry {
     this.location,
     this.comment,
     required this.createdAt,
+    required this.likeCount, // コンストラクタに追加
   });
 }
 
@@ -72,18 +75,21 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _loadDiaryEntries() async {
-    List<Map<String, dynamic>> entries = await FirestoreHelper.getDiaryEntries();
+    List<Map<String, dynamic>> entries =
+        await FirestoreHelper.getDiaryEntries();
     setState(() {
       _diaryEntries.clear();
       for (var data in entries) {
         _diaryEntries.add(
           DiaryEntry(
-            title: data['title'],
-            content: data['content'],
-            image: null, // Firestoreには画像データは含まれていないため
+            title: data['title'] ?? '',
+            content: data['content'] ?? '',
+            image: null, // Firestore には画像データは含まれていないため
             location: data['location'],
             comment: data['comment'],
-            createdAt: (data['created_at'] as Timestamp).toDate(),
+            createdAt:
+                DateTime.fromMillisecondsSinceEpoch(data['created_at'] ?? 0),
+            likeCount: data['like_count'] ?? 0, // Firestore からの like_count を追加
           ),
         );
       }
@@ -91,19 +97,20 @@ class _HomePageState extends State<HomePage> {
   }
 
   // 新しい日記を追加するメソッド
-  void _addDiaryEntry(String title, String content, File? image, String? location) {
-    String randomComment = CommentHelper.getRandomComment();
-    int randomLikeCount = Random().nextInt(101); // 0〜100のランダムな数を生成
-    DateTime now = DateTime.now();
+  void _addDiaryEntry(
+      String title, String content, File? image, String? location) {
+      String randomComment = CommentHelper.getRandomComment();
+      int randomLikeCount = Random().nextInt(100); // 0から99のランダムないいね数を生成
+      DateTime now = DateTime.now(); // 現在時刻を取得
 
-    // Firestoreに保存するデータを構成
+     // Firestoreに保存するデータを構成
     Map<String, dynamic> entryData = {
       'title': title,
       'content': content,
       'location': location,
       'comment': randomComment,
       'like_count': randomLikeCount, // Like 数を追加
-      'created_at': Timestamp.now(),
+      'created_at': now.millisecondsSinceEpoch, // 'now' を使用して作成日時を追加
     };
 
     // Firestoreにデータを追加
@@ -112,14 +119,14 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _diaryEntries.add(
         DiaryEntry(
-          title: title,
-          content: content,
-          image: image,
-          location: location,
-          comment: randomComment,
-          likeCount: randomLikeCount, // Like 数を追加
-          createdAt: now,
-        ),
+          title: entryData['title'] ?? '',
+          content: entryData['content'] ?? '',
+          image: null, // Firestoreには画像データは含まれていないため
+          location: entryData['location'],
+          comment: entryData['comment'],
+          createdAt: now, // 'now' を使用して作成日時を追加
+          likeCount: entryData['like_count'] ?? 0, // Firestoreからのlike_countを追加
+          ),
       );
     });
   }
@@ -148,10 +155,27 @@ class _HomePageState extends State<HomePage> {
                         )
                       : const Icon(Icons.image),
                   title: Text(entry.title),
-                  subtitle: Text(
-                    entry.content,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.content,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '❤️ ${entry.likeCount}', // Like 数を表示
+                        style: const TextStyle(fontSize: 14, color: Colors.red),
+                      ),
+                    ],
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.favorite, color: Colors.red),
+                      Text('${entry.likeCount}'), // いいねの数を表示
+                    ],
                   ),
                   onTap: () {
                     Navigator.push(
