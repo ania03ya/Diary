@@ -38,7 +38,6 @@ class DiaryApp extends StatelessWidget {
   }
 }
 
-
 // 日記のデータモデル
 class DiaryEntry {
   final String title;
@@ -83,7 +82,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _loadDiaryEntries() async {
-    List<Map<String, dynamic>> entries = await FirestoreHelper.getDiaryEntries();
+    List<Map<String, dynamic>> entries =
+        await FirestoreHelper.getDiaryEntries();
     setState(() {
       _diaryEntries.clear();
       _events.clear();
@@ -95,13 +95,15 @@ class _HomePageState extends State<HomePage> {
           imageUrl: data['image_url'],
           location: data['location'],
           comment: data['comment'],
-          createdAt: DateTime.fromMillisecondsSinceEpoch(data['created_at'] ?? 0),
+          createdAt:
+              DateTime.fromMillisecondsSinceEpoch(data['created_at'] ?? 0),
           likeCount: data['like_count'] ?? 0,
         );
         _diaryEntries.add(entry);
 
-         // 日記をイベントとしてカレンダーに追加
-        DateTime eventDay = DateTime(entry.createdAt.year, entry.createdAt.month, entry.createdAt.day);
+        // 日記をイベントとしてカレンダーに追加
+        DateTime eventDay = DateTime(
+            entry.createdAt.year, entry.createdAt.month, entry.createdAt.day);
         if (_events[eventDay] == null) {
           _events[eventDay] = [];
         }
@@ -111,7 +113,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   // 新しい日記を追加するメソッド
-  void _addDiaryEntry(String title, String content, File? image, String? location) async {
+  void _addDiaryEntry(
+      String title, String content, File? image, String? location) async {
     String randomComment = CommentHelper.getRandomComment();
     int randomLikeCount = Random().nextInt(100); // 0から99のランダムないいね数を生成
     DateTime now = DateTime.now(); // 現在時刻を取得
@@ -149,7 +152,8 @@ class _HomePageState extends State<HomePage> {
       );
       _diaryEntries.add(newEntry);
 
-      DateTime eventDay = DateTime(newEntry.createdAt.year, newEntry.createdAt.month, newEntry.createdAt.day);
+      DateTime eventDay = DateTime(newEntry.createdAt.year,
+          newEntry.createdAt.month, newEntry.createdAt.day);
       if (_events[eventDay] == null) {
         _events[eventDay] = [];
       }
@@ -174,7 +178,8 @@ class _HomePageState extends State<HomePage> {
               return isSameDay(_selectedDay, day);
             },
             eventLoader: (day) {
-              return _events[day] ?? [];
+              DateTime eventDay = DateTime(day.year, day.month, day.day);
+              return _events[eventDay] ?? [];
             },
             onDaySelected: (selectedDay, focusedDay) {
               setState(() {
@@ -183,7 +188,8 @@ class _HomePageState extends State<HomePage> {
             },
           ),
           Expanded(
-            child: _events[_selectedDay] == null || _events[_selectedDay]!.isEmpty
+            child: _events[_selectedDay] == null ||
+                    _events[_selectedDay]!.isEmpty
                 ? const Center(
                     child: Text('No diary entries for this day.'),
                   )
@@ -192,7 +198,8 @@ class _HomePageState extends State<HomePage> {
                     itemBuilder: (context, index) {
                       final entry = _events[_selectedDay]![index];
                       return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 8.0, horizontal: 16.0),
                         child: Card(
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(15.0),
@@ -202,7 +209,8 @@ class _HomePageState extends State<HomePage> {
                             children: [
                               if (entry.imageUrl != null)
                                 ClipRRect(
-                                  borderRadius: BorderRadius.vertical(top: Radius.circular(15.0)),
+                                  borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(15.0)),
                                   child: Image.network(
                                     entry.imageUrl!,
                                     width: double.infinity,
@@ -236,12 +244,14 @@ class _HomePageState extends State<HomePage> {
                                     if (entry.location != null)
                                       Text(
                                         '📍 ${entry.location}',
-                                        style: TextStyle(color: Colors.blueAccent),
+                                        style:
+                                            TextStyle(color: Colors.blueAccent),
                                       ),
                                     const SizedBox(height: 8),
                                     Text(
                                       '❤️ ${entry.likeCount}',
-                                      style: TextStyle(fontSize: 14, color: Colors.red),
+                                      style: TextStyle(
+                                          fontSize: 14, color: Colors.red),
                                     ),
                                   ],
                                 ),
@@ -250,7 +260,8 @@ class _HomePageState extends State<HomePage> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => DiaryDetailPage(entry: entry),
+                                      builder: (context) =>
+                                          DiaryDetailPage(entry: entry),
                                     ),
                                   );
                                 },
