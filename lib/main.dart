@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart'; // images
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:table_calendar/table_calendar.dart'; // カレンダー機能
+
 import 'helpers/image_helper.dart'; // 画像ヘルパーのインポート
 import 'helpers/location_helper.dart'; // 位置情報ヘルパー
 import 'helpers/firestore_helper.dart'; // Firestoreヘルパー
@@ -35,6 +37,7 @@ class DiaryApp extends StatelessWidget {
     );
   }
 }
+
 
 // 日記のデータモデル
 class DiaryEntry {
@@ -69,6 +72,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final List<DiaryEntry> _diaryEntries = [];
+  Map<DateTime, List<DiaryEntry>> _events = {};
+  DateTime _selectedDay = DateTime.now();
 
   // Firestoreから日記エントリーを読み込むメソッド
   @override
@@ -78,31 +83,35 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _loadDiaryEntries() async {
-    List<Map<String, dynamic>> entries =
-        await FirestoreHelper.getDiaryEntries();
+    List<Map<String, dynamic>> entries = await FirestoreHelper.getDiaryEntries();
     setState(() {
       _diaryEntries.clear();
+      _events.clear();
       for (var data in entries) {
-        _diaryEntries.add(
-          DiaryEntry(
-            title: data['title'] ?? '',
-            content: data['content'] ?? '',
-            image: null, // ローカルには画像ファイルは保持しない
-            imageUrl: data['image_url'], // Firestoreからの画像URLを設定
-            location: data['location'],
-            comment: data['comment'],
-            createdAt:
-                DateTime.fromMillisecondsSinceEpoch(data['created_at'] ?? 0),
-            likeCount: data['like_count'] ?? 0,
-          ),
+        DiaryEntry entry = DiaryEntry(
+          title: data['title'] ?? '',
+          content: data['content'] ?? '',
+          image: null, // ローカルには画像ファイルは保持しない
+          imageUrl: data['image_url'],
+          location: data['location'],
+          comment: data['comment'],
+          createdAt: DateTime.fromMillisecondsSinceEpoch(data['created_at'] ?? 0),
+          likeCount: data['like_count'] ?? 0,
         );
+        _diaryEntries.add(entry);
+
+         // 日記をイベントとしてカレンダーに追加
+        DateTime eventDay = DateTime(entry.createdAt.year, entry.createdAt.month, entry.createdAt.day);
+        if (_events[eventDay] == null) {
+          _events[eventDay] = [];
+        }
+        _events[eventDay]!.add(entry);
       }
     });
   }
 
   // 新しい日記を追加するメソッド
-  void _addDiaryEntry(
-      String title, String content, File? image, String? location) async {
+  void _addDiaryEntry(String title, String content, File? image, String? location) async {
     String randomComment = CommentHelper.getRandomComment();
     int randomLikeCount = Random().nextInt(100); // 0から99のランダムないいね数を生成
     DateTime now = DateTime.now(); // 現在時刻を取得
@@ -119,26 +128,32 @@ class _HomePageState extends State<HomePage> {
       'content': content,
       'location': location,
       'comment': randomComment,
-      'like_count': randomLikeCount, // Like 数を追加
-      'created_at': now.millisecondsSinceEpoch, // 'now' を使用して作成日時を追加
-      'image_url': imageUrl, // アップロードした画像のURLを保存
+      'like_count': randomLikeCount,
+      'created_at': now.millisecondsSinceEpoch,
+      'image_url': imageUrl,
     };
 
     // Firestoreにデータを追加
     FirestoreHelper.addDiaryEntry(entryData);
 
     setState(() {
-      _diaryEntries.add(
-        DiaryEntry(
-          title: entryData['title'] ?? '',
-          content: entryData['content'] ?? '',
-          image: image, // ローカルでの表示用
-          location: entryData['location'],
-          comment: entryData['comment'],
-          createdAt: now, // 'now' を使用して作成日時を追加
-          likeCount: entryData['like_count'] ?? 0, // Firestoreからのlike_countを追加
-        ),
+      DiaryEntry newEntry = DiaryEntry(
+        title: entryData['title'] ?? '',
+        content: entryData['content'] ?? '',
+        image: image,
+        imageUrl: imageUrl,
+        location: entryData['location'],
+        comment: entryData['comment'],
+        createdAt: now,
+        likeCount: entryData['like_count'] ?? 0,
       );
+      _diaryEntries.add(newEntry);
+
+      DateTime eventDay = DateTime(newEntry.createdAt.year, newEntry.createdAt.month, newEntry.createdAt.day);
+      if (_events[eventDay] == null) {
+        _events[eventDay] = [];
+      }
+      _events[eventDay]!.add(newEntry);
     });
   }
 
@@ -148,92 +163,107 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('My Diary'),
       ),
-      body: _diaryEntries.isEmpty
-          ? const Center(
-              child: Text('No diary entries yet.'),
-            )
-          : ListView.builder(
-              itemCount: _diaryEntries.length,
-              itemBuilder: (context, index) {
-                final entry = _diaryEntries[index];
-                return Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 500),
-                    child: Card(
-                      key: ValueKey(entry.createdAt),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15.0),
-                      ),
-                      elevation: 5,
-                      child: Column(
-                        children: [
-                          if (entry.imageUrl != null)
-                            ClipRRect(
-                              borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(15.0)),
-                              child: Image.network(
-                                entry.imageUrl!,
-                                width: double.infinity,
-                                height: 200,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ListTile(
-                            contentPadding: const EdgeInsets.all(16.0),
-                            title: Text(
-                              entry.title,
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  entry.content,
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontStyle: FontStyle.italic,
-                                    color: Colors.grey[800],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                if (entry.location != null)
-                                  Text(
-                                    '📍 ${entry.location}',
-                                    style: TextStyle(color: Colors.blueAccent),
-                                  ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '❤️ ${entry.likeCount}',
-                                  style:
-                                      TextStyle(fontSize: 14, color: Colors.red),
-                                ),
-                              ],
-                            ),
-                            trailing: const Icon(Icons.arrow_forward_ios),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      DiaryDetailPage(entry: entry),
-                                ),
-                              );
-                            },
+      body: Column(
+        children: [
+          TableCalendar(
+            focusedDay: _selectedDay,
+            firstDay: DateTime(2000),
+            lastDay: DateTime(2100),
+            calendarFormat: CalendarFormat.month,
+            selectedDayPredicate: (day) {
+              return isSameDay(_selectedDay, day);
+            },
+            eventLoader: (day) {
+              return _events[day] ?? [];
+            },
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() {
+                _selectedDay = selectedDay;
+              });
+            },
+          ),
+          Expanded(
+            child: _events[_selectedDay] == null || _events[_selectedDay]!.isEmpty
+                ? const Center(
+                    child: Text('No diary entries for this day.'),
+                  )
+                : ListView.builder(
+                    itemCount: _events[_selectedDay]!.length,
+                    itemBuilder: (context, index) {
+                      final entry = _events[_selectedDay]![index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                        child: Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15.0),
                           ),
-                        ],
-                      ),
-                    ),
+                          elevation: 5,
+                          child: Column(
+                            children: [
+                              if (entry.imageUrl != null)
+                                ClipRRect(
+                                  borderRadius: BorderRadius.vertical(top: Radius.circular(15.0)),
+                                  child: Image.network(
+                                    entry.imageUrl!,
+                                    width: double.infinity,
+                                    height: 200,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ListTile(
+                                contentPadding: const EdgeInsets.all(16.0),
+                                title: Text(
+                                  entry.title,
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      entry.content,
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontStyle: FontStyle.italic,
+                                        color: Colors.grey[800],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    if (entry.location != null)
+                                      Text(
+                                        '📍 ${entry.location}',
+                                        style: TextStyle(color: Colors.blueAccent),
+                                      ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '❤️ ${entry.likeCount}',
+                                      style: TextStyle(fontSize: 14, color: Colors.red),
+                                    ),
+                                  ],
+                                ),
+                                trailing: const Icon(Icons.arrow_forward_ios),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => DiaryDetailPage(entry: entry),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
