@@ -93,6 +93,7 @@ class _HomePageState extends State<HomePage> {
   // 新しい日記を追加するメソッド
   void _addDiaryEntry(String title, String content, File? image, String? location) {
     String randomComment = CommentHelper.getRandomComment();
+    int randomLikeCount = Random().nextInt(101); // 0〜100のランダムな数を生成
     DateTime now = DateTime.now();
 
     // Firestoreに保存するデータを構成
@@ -101,6 +102,7 @@ class _HomePageState extends State<HomePage> {
       'content': content,
       'location': location,
       'comment': randomComment,
+      'like_count': randomLikeCount, // Like 数を追加
       'created_at': Timestamp.now(),
     };
 
@@ -115,6 +117,7 @@ class _HomePageState extends State<HomePage> {
           image: image,
           location: location,
           comment: randomComment,
+          likeCount: randomLikeCount, // Like 数を追加
           createdAt: now,
         ),
       );
