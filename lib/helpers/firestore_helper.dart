@@ -1,8 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart'; // Firebase Firestore のインポート
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FirestoreHelper {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Firestore に日記エントリーを追加するメソッド
   static Future<void> addDiaryEntry(Map<String, dynamic> entryData) async {
     try {
       await _firestore.collection('diary_entries').add(entryData);
@@ -11,6 +12,7 @@ class FirestoreHelper {
     }
   }
 
+  // Firestore から日記エントリーを取得するメソッド
   static Future<List<Map<String, dynamic>>> getDiaryEntries() async {
     try {
       QuerySnapshot snapshot = await _firestore

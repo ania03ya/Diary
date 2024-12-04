@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:io'; // images
 import 'package:image_picker/image_picker.dart'; // images
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'helpers/location_helper.dart'; // 位置情報ヘルパー
 import 'helpers/firestore_helper.dart'; // Firestoreヘルパー
 import 'helpers/comment_helper.dart'; // コメントヘルパー
-import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
 void main() async {
