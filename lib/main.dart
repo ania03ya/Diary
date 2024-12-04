@@ -3,7 +3,8 @@ import 'dart:io'; // images
 import 'package:image_picker/image_picker.dart'; // images
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-//import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'helpers/image_helper.dart'; // 画像ヘルパーのインポート
 import 'helpers/location_helper.dart'; // 位置情報ヘルパー
 import 'helpers/firestore_helper.dart'; // Firestoreヘルパー
@@ -157,9 +158,9 @@ class _HomePageState extends State<HomePage> {
               itemBuilder: (context, index) {
                 final entry = _diaryEntries[index];
                 return ListTile(
-                  leading: entry.image != null
-                      ? Image.file(
-                          entry.image!,
+                  leading: entry.imageUrl != null
+                      ? Image.network(
+                          entry.imageUrl!,
                           width: 50,
                           height: 50,
                           fit: BoxFit.cover,
