@@ -4,8 +4,6 @@ import 'package:image_picker/image_picker.dart'; // images
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:table_calendar/table_calendar.dart'; // カレンダー機能
-
 import 'helpers/image_helper.dart'; // 画像ヘルパーのインポート
 import 'helpers/location_helper.dart'; // 位置情報ヘルパー
 import 'helpers/firestore_helper.dart'; // Firestoreヘルパー
@@ -71,8 +69,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final List<DiaryEntry> _diaryEntries = [];
-  Map<DateTime, List<DiaryEntry>> _events = {};
-  DateTime _selectedDay = DateTime.now();
+  String _searchQuery = '';
 
   // Firestoreから日記エントリーを読み込むメソッド
   @override
@@ -86,28 +83,20 @@ class _HomePageState extends State<HomePage> {
         await FirestoreHelper.getDiaryEntries();
     setState(() {
       _diaryEntries.clear();
-      _events.clear();
       for (var data in entries) {
-        DiaryEntry entry = DiaryEntry(
-          title: data['title'] ?? '',
-          content: data['content'] ?? '',
-          image: null, // ローカルには画像ファイルは保持しない
-          imageUrl: data['image_url'],
-          location: data['location'],
-          comment: data['comment'],
-          createdAt:
-              DateTime.fromMillisecondsSinceEpoch(data['created_at'] ?? 0),
-          likeCount: data['like_count'] ?? 0,
+        _diaryEntries.add(
+          DiaryEntry(
+            title: data['title'] ?? '',
+            content: data['content'] ?? '',
+            image: null, // ローカルには画像ファイルは保持しない
+            imageUrl: data['image_url'], // Firestoreからの画像URLを設定
+            location: data['location'],
+            comment: data['comment'],
+            createdAt:
+                DateTime.fromMillisecondsSinceEpoch(data['created_at'] ?? 0),
+            likeCount: data['like_count'] ?? 0,
+          ),
         );
-        _diaryEntries.add(entry);
-
-        // 日記をイベントとしてカレンダーに追加
-        DateTime eventDay = DateTime(
-            entry.createdAt.year, entry.createdAt.month, entry.createdAt.day);
-        if (_events[eventDay] == null) {
-          _events[eventDay] = [];
-        }
-        _events[eventDay]!.add(entry);
       }
     });
   }
@@ -131,72 +120,66 @@ class _HomePageState extends State<HomePage> {
       'content': content,
       'location': location,
       'comment': randomComment,
-      'like_count': randomLikeCount,
-      'created_at': now.millisecondsSinceEpoch,
-      'image_url': imageUrl,
+      'like_count': randomLikeCount, // Like 数を追加
+      'created_at': now.millisecondsSinceEpoch, // 'now' を使用して作成日時を追加
+      'image_url': imageUrl, // アップロードした画像のURLを保存
     };
 
     // Firestoreにデータを追加
     FirestoreHelper.addDiaryEntry(entryData);
 
     setState(() {
-      DiaryEntry newEntry = DiaryEntry(
-        title: entryData['title'] ?? '',
-        content: entryData['content'] ?? '',
-        image: image,
-        imageUrl: imageUrl,
-        location: entryData['location'],
-        comment: entryData['comment'],
-        createdAt: now,
-        likeCount: entryData['like_count'] ?? 0,
+      _diaryEntries.add(
+        DiaryEntry(
+          title: entryData['title'] ?? '',
+          content: entryData['content'] ?? '',
+          image: image, // ローカルでの表示用
+          location: entryData['location'],
+          comment: entryData['comment'],
+          createdAt: now, // 'now' を使用して作成日時を追加
+          likeCount: entryData['like_count'] ?? 0, // Firestoreからのlike_countを追加
+        ),
       );
-      _diaryEntries.add(newEntry);
-
-      DateTime eventDay = DateTime(newEntry.createdAt.year,
-          newEntry.createdAt.month, newEntry.createdAt.day);
-      if (_events[eventDay] == null) {
-        _events[eventDay] = [];
-      }
-      _events[eventDay]!.add(newEntry);
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    List<DiaryEntry> filteredEntries = _diaryEntries
+        .where((entry) =>
+            entry.title.contains(_searchQuery) ||
+            entry.content.contains(_searchQuery))
+        .toList();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Diary'),
       ),
       body: Column(
         children: [
-          TableCalendar(
-            focusedDay: _selectedDay,
-            firstDay: DateTime(2000),
-            lastDay: DateTime(2100),
-            calendarFormat: CalendarFormat.month,
-            selectedDayPredicate: (day) {
-              return isSameDay(_selectedDay, day);
-            },
-            eventLoader: (day) {
-              DateTime eventDay = DateTime(day.year, day.month, day.day);
-              return _events[eventDay] ?? [];
-            },
-            onDaySelected: (selectedDay, focusedDay) {
-              setState(() {
-                _selectedDay = selectedDay;
-              });
-            },
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              decoration: const InputDecoration(
+                labelText: 'Search',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (query) {
+                setState(() {
+                  _searchQuery = query;
+                });
+              },
+            ),
           ),
           Expanded(
-            child: _events[_selectedDay] == null ||
-                    _events[_selectedDay]!.isEmpty
+            child: filteredEntries.isEmpty
                 ? const Center(
-                    child: Text('No diary entries for this day.'),
+                    child: Text('No diary entries found.'),
                   )
                 : ListView.builder(
-                    itemCount: _events[_selectedDay]!.length,
+                    itemCount: filteredEntries.length,
                     itemBuilder: (context, index) {
-                      final entry = _events[_selectedDay]![index];
+                      final entry = filteredEntries[index];
                       return Padding(
                         padding: const EdgeInsets.symmetric(
                             vertical: 8.0, horizontal: 16.0),
@@ -244,8 +227,8 @@ class _HomePageState extends State<HomePage> {
                                     if (entry.location != null)
                                       Text(
                                         '📍 ${entry.location}',
-                                        style:
-                                            TextStyle(color: Colors.blueAccent),
+                                        style: TextStyle(
+                                            color: Colors.blueAccent),
                                       ),
                                     const SizedBox(height: 8),
                                     Text(
