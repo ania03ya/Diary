@@ -43,7 +43,6 @@ class DiaryEntry {
   final File? image; // ローカル画像ファイル
   final String? imageUrl; // Firebase Storage の画像 URL
   final String? location; // 位置情報を追加
-  final String? comment; // コメントを追加
   final List<String>? comments; // 複数のコメントを追加
   final DateTime createdAt;
   final int likeCount; // いいねの数を追加
@@ -54,7 +53,7 @@ class DiaryEntry {
     this.image,
     this.imageUrl,
     this.location,
-    this.comment,
+    this.comments,
     required this.createdAt,
     required this.likeCount, // コンストラクタに追加
   });
@@ -92,7 +91,7 @@ class _HomePageState extends State<HomePage> {
             image: null, // ローカルには画像ファイルは保持しない
             imageUrl: data['image_url'], // Firestoreからの画像URLを設定
             location: data['location'],
-            comment: data['comment'],
+            comments: data['comments'],
             createdAt:
                 DateTime.fromMillisecondsSinceEpoch(data['created_at'] ?? 0),
             likeCount: data['like_count'] ?? 0,
@@ -120,10 +119,11 @@ class _HomePageState extends State<HomePage> {
       'title': title,
       'content': content,
       'location': location,
-      'comment': [
+      'comments': [
         randomComment,
         CommentHelper.getRandomReply(), // 返信コメントも追加
-        CommentHelper.getRandomReply() // 複数のコメントを追加
+        CommentHelper.getRandomReply(), // 複数のコメントを追加
+        CommentHelper.getRandomCommentsWithReplies(2), // 返信コメント2つを含むコメントリスト
       ], // コメントのリストをFirestoreに保存
       'like_count': randomLikeCount, // Like 数を追加
       'created_at': now.millisecondsSinceEpoch, // 'now' を使用して作成日時を追加
@@ -140,7 +140,7 @@ class _HomePageState extends State<HomePage> {
           content: entryData['content'] ?? '',
           image: image, // ローカルでの表示用
           location: entryData['location'],
-          comment: entryData['comment'],
+          comments: entryData['comment'],
           createdAt: now, // 'now' を使用して作成日時を追加
           likeCount: entryData['like_count'] ?? 0, // Firestoreからのlike_countを追加
         ),
