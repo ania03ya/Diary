@@ -44,6 +44,7 @@ class DiaryEntry {
   final String? imageUrl; // Firebase Storage の画像 URL
   final String? location; // 位置情報を追加
   final String? comment; // コメントを追加
+  final List<String>? comments; // 複数のコメントを追加
   final DateTime createdAt;
   final int likeCount; // いいねの数を追加
 
@@ -119,7 +120,11 @@ class _HomePageState extends State<HomePage> {
       'title': title,
       'content': content,
       'location': location,
-      'comment': randomComment,
+      'comment': [
+        randomComment,
+        CommentHelper.getRandomReply(), // 返信コメントも追加
+        CommentHelper.getRandomReply() // 複数のコメントを追加
+      ], // コメントのリストをFirestoreに保存
       'like_count': randomLikeCount, // Like 数を追加
       'created_at': now.millisecondsSinceEpoch, // 'now' を使用して作成日時を追加
       'image_url': imageUrl, // アップロードした画像のURLを保存
@@ -227,8 +232,8 @@ class _HomePageState extends State<HomePage> {
                                     if (entry.location != null)
                                       Text(
                                         '📍 ${entry.location}',
-                                        style: TextStyle(
-                                            color: Colors.blueAccent),
+                                        style:
+                                            TextStyle(color: Colors.blueAccent),
                                       ),
                                     const SizedBox(height: 8),
                                     Text(
@@ -434,65 +439,65 @@ class DiaryDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(entry.title),
+  return Scaffold(
+    appBar: AppBar(
+      title: Text(entry.title),
+    ),
+    body: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (entry.imageUrl != null)
+            Image.network(
+              entry.imageUrl!,
+              fit: BoxFit.cover,
+            ),
+          const SizedBox(height: 16),
+          Text(
+            entry.title,
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            entry.content,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          if (entry.location != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 16.0),
+              child: Text('Location: ${entry.location}'),
+            ),
+          const SizedBox(height: 16),
+          if (entry.comments != null && entry.comments!.isNotEmpty)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: entry.comments!.map((comment) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.comment, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      Text(
+                        comment,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('Back'),
+          ),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (entry.imageUrl != null)
-              Image.network(
-                entry.imageUrl!,
-                fit: BoxFit.cover,
-              ),
-            if (entry.imageUrl == null && entry.image != null)
-              Image.file(
-                entry.image!,
-                fit: BoxFit.cover,
-              ),
-            const SizedBox(height: 16),
-            Text(
-              entry.title,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              entry.content,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            if (entry.location != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 16.0),
-                child: Text('Location: ${entry.location}'),
-              ),
-            const SizedBox(height: 16),
-            if (entry.comment != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 16.0),
-                child: Row(
-                  children: [
-                    const Icon(Icons.favorite, color: Colors.red),
-                    const SizedBox(width: 8),
-                    Text(
-                      entry.comment!,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Back'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    ),
+  );
+ }
 }
