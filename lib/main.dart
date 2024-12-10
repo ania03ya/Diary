@@ -3,8 +3,8 @@ import 'dart:io'; // images
 import 'package:image_picker/image_picker.dart'; // images
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'helpers/image_helper.dart'; // 画像ヘルパーのインポート
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'helpers/image_helper.dart'; // 画像ヘルパーのインポート
 import 'helpers/location_helper.dart'; // 位置情報ヘルパー
 import 'helpers/firestore_helper.dart'; // Firestoreヘルパー
 import 'helpers/comment_helper.dart'; // コメントヘルパー
@@ -181,78 +181,78 @@ class _HomePageState extends State<HomePage> {
                 ? const Center(
                     child: Text('No diary entries found.'),
                   )
-                : ListView.builder(
+                : GridView.builder(
+                    padding: const EdgeInsets.all(10),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2, // カラム数
+                      crossAxisSpacing: 10, // カラム間の間隔
+                      mainAxisSpacing: 10, // 行間の間隔
+                      childAspectRatio: 3 / 4, // カードの縦横比
+                    ),
                     itemCount: filteredEntries.length,
                     itemBuilder: (context, index) {
                       final entry = filteredEntries[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 8.0, horizontal: 16.0),
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  DiaryDetailPage(entry: entry),
+                            ),
+                          );
+                        },
                         child: Card(
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15.0),
+                            borderRadius: BorderRadius.circular(15),
                           ),
                           elevation: 5,
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (entry.imageUrl != null)
                                 ClipRRect(
-                                  borderRadius: BorderRadius.vertical(
-                                      top: Radius.circular(15.0)),
+                                  borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(15),
+                                  ),
                                   child: Image.network(
                                     entry.imageUrl!,
+                                    height: 120,
                                     width: double.infinity,
-                                    height: 200,
                                     fit: BoxFit.cover,
                                   ),
+                                )
+                              else
+                                const Icon(
+                                  Icons.image,
+                                  size: 120,
+                                  color: Colors.grey,
                                 ),
-                              ListTile(
-                                contentPadding: const EdgeInsets.all(16.0),
-                                title: Text(
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
                                   entry.title,
-                                  style: TextStyle(
-                                    fontSize: 22,
+                                  style: const TextStyle(
+                                    fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      entry.content,
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontStyle: FontStyle.italic,
-                                        color: Colors.grey[800],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    if (entry.location != null)
-                                      Text(
-                                        '📍 ${entry.location}',
-                                        style:
-                                            TextStyle(color: Colors.blueAccent),
-                                      ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      '❤️ ${entry.likeCount}',
-                                      style: TextStyle(
-                                          fontSize: 14, color: Colors.red),
-                                    ),
-                                  ],
+                              ),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: Text(
+                                  entry.content,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                trailing: const Icon(Icons.arrow_forward_ios),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          DiaryDetailPage(entry: entry),
-                                    ),
-                                  );
-                                },
                               ),
                             ],
                           ),
@@ -439,65 +439,65 @@ class DiaryDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: Text(entry.title),
-    ),
-    body: Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (entry.imageUrl != null)
-            Image.network(
-              entry.imageUrl!,
-              fit: BoxFit.cover,
-            ),
-          const SizedBox(height: 16),
-          Text(
-            entry.title,
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            entry.content,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          if (entry.location != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 16.0),
-              child: Text('Location: ${entry.location}'),
-            ),
-          const SizedBox(height: 16),
-          if (entry.comments != null && entry.comments!.isNotEmpty)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: entry.comments!.map((comment) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.comment, color: Colors.grey),
-                      const SizedBox(width: 8),
-                      Text(
-                        comment,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text('Back'),
-          ),
-        ],
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(entry.title),
       ),
-    ),
-  );
- }
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (entry.imageUrl != null)
+              Image.network(
+                entry.imageUrl!,
+                fit: BoxFit.cover,
+              ),
+            const SizedBox(height: 16),
+            Text(
+              entry.title,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              entry.content,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            if (entry.location != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: Text('Location: ${entry.location}'),
+              ),
+            const SizedBox(height: 16),
+            if (entry.comments != null && entry.comments!.isNotEmpty)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: entry.comments!.map((comment) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.comment, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Text(
+                          comment,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Back'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
