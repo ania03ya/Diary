@@ -469,25 +469,7 @@ class DiaryDetailPage extends StatelessWidget {
                 child: Text('Location: ${entry.location}'),
               ),
             const SizedBox(height: 16),
-            if (entry.comments != null && entry.comments!.isNotEmpty)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: entry.comments!.map((comment) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.comment, color: Colors.grey),
-                        const SizedBox(width: 8),
-                        Text(
-                          comment,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
+            _buildCommentsSection(context, entry),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
@@ -498,6 +480,61 @@ class DiaryDetailPage extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCommentsSection(BuildContext context, DiaryEntry entry) {
+    // 擬似コメントデータ
+    List<Map<String, String>> subComments = [
+      {"name": "UserA", "comment": "この場所最高ですね！どこですか？"},
+      {"name": "UserB", "comment": "前に行ったことがあります！おすすめです！"},
+      {"name": "UserC", "comment": "素敵な写真ですね。"}
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: subComments.length,
+          itemBuilder: (context, index) {
+            final subComment = subComments[index];
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const CircleAvatar(
+                    radius: 16,
+                    child: Icon(Icons.person, size: 16),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          subComment["name"]!,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          subComment["comment"]!,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }
