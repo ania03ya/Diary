@@ -3,6 +3,7 @@ import 'dart:io'; // images
 import 'package:image_picker/image_picker.dart'; // images
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:floating_bubbles/floating_bubbles.dart';
 // import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'helpers/image_helper.dart'; // 画像ヘルパーのインポート
 import 'helpers/location_helper.dart'; // 位置情報ヘルパー
@@ -160,106 +161,127 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('My Diary'),
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              decoration: const InputDecoration(
-                labelText: 'Search',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (query) {
-                setState(() {
-                  _searchQuery = query;
-                });
-              },
+          Positioned.fill(
+            child: FloatingBubbles(
+              noOfBubbles: 25,
+              colorsOfBubbles: [
+                Colors.green.withAlpha(30),
+                Colors.red,
+              ],
+              sizeFactor: 0.16,
+              duration: 120, // 120 seconds.
+              opacity: 70,
+              paintingStyle: PaintingStyle.fill,
+              strokeWidth: 8,
+              shape: BubbleShape
+                  .circle, // circle is the default. No need to explicitly mention if its a circle.
+              speed: BubbleSpeed.normal, // normal is the default
             ),
           ),
-          Expanded(
-            child: filteredEntries.isEmpty
-                ? const Center(
-                    child: Text('No diary entries found.'),
-                  )
-                : GridView.builder(
-                    padding: const EdgeInsets.all(10),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2, // カラム数
-                      crossAxisSpacing: 10, // カラム間の間隔
-                      mainAxisSpacing: 10, // 行間の間隔
-                      childAspectRatio: 3 / 4, // カードの縦横比
-                    ),
-                    itemCount: filteredEntries.length,
-                    itemBuilder: (context, index) {
-                      final entry = filteredEntries[index];
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  DiaryDetailPage(entry: entry),
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Search',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (query) {
+                    setState(() {
+                      _searchQuery = query;
+                    });
+                  },
+                ),
+              ),
+              Expanded(
+                child: filteredEntries.isEmpty
+                    ? const Center(
+                        child: Text('No diary entries found.'),
+                      )
+                    : GridView.builder(
+                        padding: const EdgeInsets.all(10),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2, // カラム数
+                          crossAxisSpacing: 10, // カラム間の間隔
+                          mainAxisSpacing: 10, // 行間の間隔
+                          childAspectRatio: 3 / 4, // カードの縦横比
+                        ),
+                        itemCount: filteredEntries.length,
+                        itemBuilder: (context, index) {
+                          final entry = filteredEntries[index];
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      DiaryDetailPage(entry: entry),
+                                ),
+                              );
+                            },
+                            child: Card(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              elevation: 5,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (entry.imageUrl != null)
+                                    ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(15),
+                                      ),
+                                      child: Image.network(
+                                        entry.imageUrl!,
+                                        height: 120,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    )
+                                  else
+                                    const Icon(
+                                      Icons.image,
+                                      size: 120,
+                                      color: Colors.grey,
+                                    ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(
+                                      entry.title,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8.0),
+                                    child: Text(
+                                      entry.content,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         },
-                        child: Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          elevation: 5,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (entry.imageUrl != null)
-                                ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(15),
-                                  ),
-                                  child: Image.network(
-                                    entry.imageUrl!,
-                                    height: 120,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              else
-                                const Icon(
-                                  Icons.image,
-                                  size: 120,
-                                  color: Colors.grey,
-                                ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  entry.title,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 8.0),
-                                child: Text(
-                                  entry.content,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                      ),
+              ),
+            ],
           ),
         ],
       ),
