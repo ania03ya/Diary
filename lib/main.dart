@@ -4,11 +4,13 @@ import 'package:image_picker/image_picker.dart'; // images
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:floating_bubbles/floating_bubbles.dart';
+import 'package:simple_gradient_text/simple_gradient_text.dart';
 // import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'helpers/image_helper.dart'; // 画像ヘルパーのインポート
 import 'helpers/location_helper.dart'; // 位置情報ヘルパー
 import 'helpers/firestore_helper.dart'; // Firestoreヘルパー
 import 'helpers/comment_helper.dart'; // コメントヘルパー
+import 'components/star_thumb_shape.dart';
 import 'firebase_options.dart';
 import 'dart:math'; // ランダム生成に使用
 
@@ -31,6 +33,10 @@ class DiaryApp extends StatelessWidget {
       title: 'Diary App',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        scaffoldBackgroundColor: const Color(0xFFB9BFAF),
+        sliderTheme: const SliderThemeData(
+          thumbShape: StarThumbShape(),
+        ),
       ),
       home: const HomePage(),
     );
@@ -71,6 +77,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final List<DiaryEntry> _diaryEntries = [];
   String _searchQuery = '';
+  double _currentSliderValue = 20;
 
   // Firestoreから日記エントリーを読み込むメソッド
   @override
@@ -159,7 +166,30 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Diary'),
+        backgroundColor: const Color(0xFFB9BFAF),
+        title: GradientText(
+          'BlissBoard',
+          style: const TextStyle(fontSize: 30, fontFamily: 'IrishGrover'),
+          gradientType: GradientType.linear,
+          gradientDirection: GradientDirection.ttb,
+          colors: const [
+            Color(0xffFED418),
+            Color(0xffFCAE00),
+          ],
+          stops: const [
+            0.27,
+            1,
+          ],
+        ),
+        centerTitle: false,
+        actions: <Widget>[
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.menu),
+            iconSize: 41,
+            color: const Color(0xff585836),
+          )
+        ],
       ),
       body: Stack(
         children: [
@@ -182,6 +212,56 @@ class _HomePageState extends State<HomePage> {
           ),
           Column(
             children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 46,
+                      backgroundImage:
+                          const AssetImage('assets/icons/avatar.png'),
+                      // imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
+                      backgroundColor: Colors
+                          .grey.shade200, // A default color for the avatar
+                      child: null,
+                      // child: imageUrl.isEmpty ? Text(userInitials) : null,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 29),
+                      child: Column(
+                        children: [
+                          GradientText(
+                            'USER NAME',
+                            style: const TextStyle(
+                                fontSize: 30, fontFamily: 'IrishGrover'),
+                            gradientType: GradientType.linear,
+                            gradientDirection: GradientDirection.ttb,
+                            colors: const [
+                              Color(0xff948D6C),
+                              Color(0xff444242),
+                            ],
+                            stops: const [
+                              0,
+                              0.65,
+                            ],
+                          ),
+                          Slider(
+                            value: _currentSliderValue,
+                            max: 100,
+                            label: _currentSliderValue.round().toString(),
+                            activeColor: const Color(0xff585836),
+                            onChanged: (double value) {
+                              setState(() {
+                                _currentSliderValue = value;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: TextField(
