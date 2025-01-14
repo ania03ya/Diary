@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "474236813463",
+    "project_id": "thanksforallmyfans",
+    "storage_bucket": "thanksforallmyfans.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:474236813463:android:ae673e8ea0875d30a469d2",
+        "android_client_info": {
+          "package_name": "com.example.diary_application"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBUl1kPnA1FQ2e5byYZEIQ4CYe477hdfyA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

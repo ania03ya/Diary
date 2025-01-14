@@ -3,6 +3,7 @@ import 'dart:io'; // images
 import 'package:image_picker/image_picker.dart'; // images
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:floating_bubbles/floating_bubbles.dart';
 import 'package:simple_gradient_text/simple_gradient_text.dart';
 // import 'package:cloud_firestore/cloud_firestore.dart';
@@ -19,6 +20,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
 
   runApp(const DiaryApp());
 }
