@@ -13,6 +13,7 @@ import 'helpers/firestore_helper.dart'; // Firestoreヘルパー
 import 'helpers/comment_helper.dart'; // コメントヘルパー
 import 'components/star_thumb_shape.dart';
 import 'firebase_options.dart';
+import 'auth.dart';
 import 'dart:math'; // ランダム生成に使用
 
 void main() async {
@@ -40,7 +41,26 @@ class DiaryApp extends StatelessWidget {
           thumbShape: StarThumbShape(),
         ),
       ),
-      home: const HomePage(),
+      home: const AuthGate(),
+    );
+  }
+}
+
+class AuthGate extends StatelessWidget {
+  const AuthGate({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // User is not signed in
+        if (!snapshot.hasData) {
+          return AuthPage();
+        }
+
+        return const HomePage();
+      },
     );
   }
 }
