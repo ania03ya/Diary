@@ -28,7 +28,7 @@ void main() async {
 
 // アプリ全体の構成
 class DiaryApp extends StatelessWidget {
-  const DiaryApp({Key? key}) : super(key: key);
+  const DiaryApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +47,7 @@ class DiaryApp extends StatelessWidget {
 }
 
 class AuthGate extends StatelessWidget {
-  const AuthGate({Key? key}) : super(key: key);
+  const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +90,7 @@ class DiaryEntry {
 
 // ホームページ
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   _HomePageState createState() => _HomePageState();
